@@ -1,11 +1,22 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"backend/app"
+	"backend/router"
+	"fmt"
+	"log"
+)
 
 func main() {
-	app := fiber.New()
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, Fiber 🚀")
-	})
-	app.Listen(":3000")
+	fmt.Println("*************** SERVER MODE ***************")
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Panic recovered: %v", r)
+		}
+	}()
+	app.Setup()
+
+	fmt.Println("*************** INIT JOBS SUCCESSFULLY ***************")
+
+	router.Setup()
 }
