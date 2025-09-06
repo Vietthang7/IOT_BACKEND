@@ -8,18 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-//	func Setup() {
-//		app := fiber.New(fiber.Config{
-//			// Prefork: true,
-//		})
-//		app.Use(cors.New())
-//		setupRouter(app)
-//		port := mainapp.Config("WEB_PORT")
-//		if len(port) == 0 {
-//			port = "4000"
-//		}
-//		_ = app.Listen(":" + port)
-//	}
 func Setup() {
 	fiber_app := fiber.New(fiber.Config{
 		Prefork:       false,
