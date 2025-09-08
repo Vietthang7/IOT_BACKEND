@@ -18,7 +18,7 @@ func (u *DeviceHistory) Find(p *consts.RequestTable, query interface{}, args []i
 		DB          = p.CustomOptions(app.Database.DB).WithContext(ctx).Where(query, args...)
 	)
 	defer cancel()
-	err = DB.Find(&entries).Error
+	err = DB.Debug().Find(&entries).Error
 	return
 }
 
@@ -30,4 +30,13 @@ func (u *DeviceHistory) Count(query interface{}, args []interface{}) int64 {
 	defer cancel()
 	app.Database.DB.Where(query, args...).Model(&model.DeviceHistory{}).WithContext(ctx).Count(&count)
 	return count
+}
+func (d *DeviceHistory) GetDistinctDeviceNames() ([]string, error) {
+	var deviceNames []string
+
+	err := app.Database.DB.Model(&model.DeviceHistory{}).
+		Distinct("device_name").
+		Pluck("device_name", &deviceNames).Error
+
+	return deviceNames, err
 }

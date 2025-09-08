@@ -2,7 +2,6 @@ package router
 
 import (
 	"backend/internal/handler"
-	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,10 +18,11 @@ func Setup() {
 
 	setupRouter(fiber_app)
 
-	fmt.Println("*************** SERVER LISTENING ON PORT 3301 ***************")
 	log.Fatal(fiber_app.Listen(":3002"))
 }
 func setupRouter(fiber_app *fiber.App) {
 	api := fiber_app.Group("/api")
-	api.Get("/device_history", handler.GetAllDeviceHistory)
+	api.Get("/device_history", handler.GetDeviceHistory)
+	api.Get("/data_sensor", handler.GetDataSensor)
+	api.Get("/list_devices", handler.ListDevices)
 }

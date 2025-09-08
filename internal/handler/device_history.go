@@ -4,13 +4,14 @@ import (
 	"backend/internal/consts"
 	"backend/internal/repo"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )
 
-func GetAllDeviceHistory(c *fiber.Ctx) error {
+func GetDeviceHistory(c *fiber.Ctx) error {
 	var (
 		err        error
 		entry      repo.DeviceHistory
@@ -18,21 +19,46 @@ func GetAllDeviceHistory(c *fiber.Ctx) error {
 		query      = ""
 		args       = []interface{}{}
 		pagination = consts.BindRequestTable(c, "time")
+		conditions = []string{}
 	)
-	if pagination.Search != "" {
-		query += "device_name LIKE ?"
-		args = append(args, "%"+pagination.Search+"%")
+	sortParam := c.Query("sort", "true")
+	if sortParam == "true" {
+		pagination.Dir = "desc"
+	} else {
+		pagination.Dir = "asc"
 	}
+	pagination.Order = "time"
+
+	if c.Query("device_name") != "" {
+		conditions = append(conditions, "device_name LIKE ?")
+		args = append(args, c.Query("device_name"))
+	}
+
+	if c.Query("action") != "" {
+		conditions = append(conditions, "action = ?")
+		args = append(args, c.Query("action"))
+	}
+
 	if c.Query("start_time") != "" {
-		startTime, _ := time.Parse("02-01-2006", c.Query("startTime"))
-		query += " AND time > ?"
-		args = append(args, startTime)
+		startTime, err := time.Parse("2006-01-02T15:04:05.000Z", c.Query("start_time"))
+		if err == nil {
+			conditions = append(conditions, "time >= ?")
+			args = append(args, startTime)
+		}
 	}
+
 	if c.Query("end_time") != "" {
-		endTime, _ := time.Parse("02-01-2006", c.Query("endTime"))
-		query += " AND time < ?"
-		args = append(args, endTime.Add(24*time.Hour))
+		endTime, err := time.Parse("2006-01-02T15:04:05.000Z", c.Query("end_time"))
+		if err == nil {
+			conditions = append(conditions, "time <= ?")
+			args = append(args, endTime)
+		}
 	}
+
+	if len(conditions) > 0 {
+		query = strings.Join(conditions, " AND ")
+	}
+
 	if entries, err = entry.Find(&pagination, query, args); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError,
@@ -42,5 +68,24 @@ func GetAllDeviceHistory(c *fiber.Ctx) error {
 	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
 		"data":       entries,
 		"pagination": pagination,
+	})
+}
+
+func ListDevices(c *fiber.Ctx) error {
+	var (
+		err         error
+		entry       repo.DeviceHistory
+		deviceNames []string
+	)
+
+	if deviceNames, err = entry.GetDistinctDeviceNames(); err != nil {
+		logrus.Error(err)
+		return ResponseError(c, fiber.StatusInternalServerError,
+			fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
+	}
+
+	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
+		"devices": deviceNames,
+		"count":   len(deviceNames),
 	})
 }

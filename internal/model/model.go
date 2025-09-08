@@ -10,7 +10,6 @@ import (
 type Model struct {
 	ID        uuid.UUID       `gorm:"primaryKey;default:(UUID())" json:"id,omitempty" `
 	CreatedAt *time.Time      `gorm:"index" json:"created_at,omitempty"`
-	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
 	DeletedAt *gorm.DeletedAt `json:"deleted_at,omitempty"`
 }
 
