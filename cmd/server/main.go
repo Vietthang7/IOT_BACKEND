@@ -16,7 +16,5 @@ func main() {
 	}()
 	app.Setup()
 
-	fmt.Println("*************** INIT JOBS SUCCESSFULLY ***************")
-
 	router.Setup()
 }
