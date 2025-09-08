@@ -2,6 +2,8 @@ package main
 
 import (
 	"backend/app"
+	"backend/internal/mqtt"
+	"backend/internal/socketio"
 	"backend/router"
 	"fmt"
 	"log"
@@ -15,6 +17,7 @@ func main() {
 		}
 	}()
 	app.Setup()
-
+	socketio.Setup() // Setup socketio trước để đăng ký broadcaster
+	mqtt.Setup()     // ← Setup sau để sử dụng broadcaster
 	router.Setup()
 }

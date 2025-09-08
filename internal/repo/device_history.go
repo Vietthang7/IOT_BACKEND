@@ -40,3 +40,12 @@ func (d *DeviceHistory) GetDistinctDeviceNames() ([]string, error) {
 
 	return deviceNames, err
 }
+func (d *DeviceHistory) Create() error {
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	)
+	defer cancel()
+
+	err := app.Database.DB.WithContext(ctx).Create(d).Error
+	return err
+}

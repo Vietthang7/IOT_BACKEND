@@ -31,3 +31,12 @@ func (u *DataSensor) Count(query interface{}, args []interface{}) int64 {
 	app.Database.DB.Where(query, args...).Model(&model.DataSensor{}).WithContext(ctx).Count(&count)
 	return count
 }
+func (d *DataSensor) Create() error {
+	var (
+		ctx, cancel = context.WithTimeout(context.Background(), app.CTimeOut)
+	)
+	defer cancel()
+
+	err := app.Database.DB.WithContext(ctx).Create(d).Error
+	return err
+}

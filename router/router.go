@@ -2,9 +2,11 @@ package router
 
 import (
 	"backend/internal/handler"
+	"backend/internal/socketio"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 )
 
 func Setup() {
@@ -25,4 +27,7 @@ func setupRouter(fiber_app *fiber.App) {
 	api.Get("/device_history", handler.GetDeviceHistory)
 	api.Get("/data_sensor", handler.GetDataSensor)
 	api.Get("/list_devices", handler.ListDevices)
+	api.Post("/control_device", handler.ControlDevice)
+	// Cấu hình Socket.IO
+	fiber_app.Use("/socket.io/", adaptor.HTTPHandler(socketio.ServeHTTP()))
 }
