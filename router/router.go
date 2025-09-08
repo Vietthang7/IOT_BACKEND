@@ -24,5 +24,5 @@ func Setup() {
 }
 func setupRouter(fiber_app *fiber.App) {
 	api := fiber_app.Group("/api")
-	api.Get("/sensors", handler.GetAllSensorData)
+	api.Get("/device_history", handler.GetAllDeviceHistory)
 }
