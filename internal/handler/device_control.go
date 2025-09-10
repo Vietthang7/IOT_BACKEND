@@ -21,7 +21,6 @@ func ControlDevice(c *fiber.Ctx) error {
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.GetFailed)
 	}
 
-	// Kiểm tra dữ liệu
 	if req.DeviceName == "" || (req.Action != consts.ACTION_ON && req.Action != consts.ACTION_OFF) {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.GetFailed)
 	}
@@ -32,6 +31,5 @@ func ControlDevice(c *fiber.Ctx) error {
 			fmt.Sprintf("Lỗi gửi lệnh: %s", err.Error()), consts.GetFailed)
 	}
 
-	// Trả về thành công khi đã gửi lệnh
 	return ResponseSuccess(c, fiber.StatusOK, "Đã gửi lệnh điều khiển thiết bị", nil)
 }
