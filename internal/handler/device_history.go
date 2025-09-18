@@ -73,19 +73,19 @@ func GetDeviceHistory(c *fiber.Ctx) error {
 
 func ListDevices(c *fiber.Ctx) error {
 	var (
-		err         error
-		entry       repo.DeviceHistory
-		deviceNames []string
+		err          error
+		entry        repo.DeviceHistory
+		deviceStatus []map[string]interface{}
 	)
 
-	if deviceNames, err = entry.GetDistinctDeviceNames(); err != nil {
+	if deviceStatus, err = entry.GetDevicesWithLatestStatus(); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError,
 			fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
 	}
 
 	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
-		"devices": deviceNames,
-		"count":   len(deviceNames),
+		"devices": deviceStatus,
+		"count":   len(deviceStatus),
 	})
 }

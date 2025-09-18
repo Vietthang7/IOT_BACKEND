@@ -1,5 +1,7 @@
 package consts
 
+import "time"
+
 const (
 	// Device Names
 	DEVICE_DEN     = "den"
@@ -20,4 +22,7 @@ const (
 	TOPIC_DEN_STATUS     = "esp32/denStatus"
 	TOPIC_QUAT_STATUS    = "esp32/quatStatus"
 	TOPIC_DIEUHOA_STATUS = "esp32/dieuhoaStatus"
+
+	// TimeOut
+	TIMEOUT = 5 * time.Second
 )

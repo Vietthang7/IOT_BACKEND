@@ -31,14 +31,26 @@ func (u *DeviceHistory) Count(query interface{}, args []interface{}) int64 {
 	app.Database.DB.Where(query, args...).Model(&model.DeviceHistory{}).WithContext(ctx).Count(&count)
 	return count
 }
-func (d *DeviceHistory) GetDistinctDeviceNames() ([]string, error) {
-	var deviceNames []string
+func (d *DeviceHistory) GetDevicesWithLatestStatus() ([]map[string]interface{}, error) {
+	var results []map[string]interface{}
 
-	err := app.Database.DB.Model(&model.DeviceHistory{}).
-		Distinct("device_name").
-		Pluck("device_name", &deviceNames).Error
+	err := app.Database.DB.Raw(`
+        SELECT 
+            dh1.device_name,
+            dh1.action,
+            dh1.time as last_updated
+        FROM device_histories dh1
+        INNER JOIN (
+            SELECT device_name, MAX(time) as max_time
+            FROM device_histories
+            WHERE deleted_at IS NULL
+            GROUP BY device_name
+        ) dh2 ON dh1.device_name = dh2.device_name AND dh1.time = dh2.max_time
+        WHERE dh1.deleted_at IS NULL
+        ORDER BY dh1.device_name
+    `).Scan(&results).Error
 
-	return deviceNames, err
+	return results, err
 }
 func (d *DeviceHistory) Create() error {
 	var (

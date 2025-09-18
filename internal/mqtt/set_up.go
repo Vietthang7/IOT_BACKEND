@@ -4,9 +4,11 @@ import (
 	"backend/internal/broker"
 	"backend/internal/consts"
 	"backend/internal/repo"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -15,9 +17,13 @@ import (
 
 var client mqtt.Client
 
+// Map để theo dõi các lệnh chờ phản hồi
+var pendingCommands = make(map[string]chan string)
+var pendingMutex = sync.Mutex{}
+
 func Setup() {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker("tcp://192.22.18.104:1883")
+	opts.AddBroker("tcp://192.22.18.101:1883")
 	opts.SetUsername("user1")
 	opts.SetPassword("123456")
 	opts.SetClientID("backend-server")
@@ -87,6 +93,12 @@ func processSensorData(payload string) {
 	}
 
 	dataSensor.Create()
+	broker.BroadcastSensorData(map[string]interface{}{
+		"temp":     temp,
+		"humidity": humidity,
+		"lux":      light,
+		"time":     time.Now(),
+	})
 }
 
 func processDeviceStatus(topic, payload string) {
@@ -100,19 +112,36 @@ func processDeviceStatus(topic, payload string) {
 		deviceName = consts.DEVICE_DIEUHOA
 	}
 
-	logrus.Infof("Received device status confirmation: %s = %s", deviceName, payload)
+	// Validation payload
+	if payload != consts.ACTION_ON && payload != consts.ACTION_OFF {
+		logrus.Errorf("Invalid device status: %s from topic: %s", payload, topic)
+		return
+	}
 
-	// CHỈ LƯU VÀO DATABASE KHI NHẬN ĐƯỢC XÁC NHẬN TỪ ESP32
+	// ✅ THÊM LOGIC GỬI PHẢN HỒI VỀ CHANNEL
+	commandKey := fmt.Sprintf("%s:%s", deviceName, payload)
+
+	pendingMutex.Lock()
+	if responseChan, exists := pendingCommands[commandKey]; exists {
+		// Gửi phản hồi qua channel
+		select {
+		case responseChan <- payload:
+			logrus.Infof("Response sent to waiting command: %s", commandKey)
+		default:
+			logrus.Warnf("Response channel full for command: %s", commandKey)
+		}
+	}
+	pendingMutex.Unlock()
+
+	// Lưu vào database
 	deviceHistory := repo.DeviceHistory{
 		DeviceName: deviceName,
-		Action:     payload, // ON hoặc OFF đã được xác nhận từ ESP32
+		Action:     payload,
 		Time:       time.Now(),
 	}
 
 	if err := deviceHistory.Create(); err != nil {
 		logrus.Errorf("Failed to save device history: %v", err)
-	} else {
-		logrus.Infof("Device history saved: %s %s", deviceName, payload)
 	}
 
 	// Broadcast trạng thái đã được xác nhận
@@ -124,7 +153,7 @@ func processDeviceStatus(topic, payload string) {
 }
 
 // Hàm gửi lệnh điều khiển đến thiết bị
-func PublishCommand(deviceName, action string) error {
+func PublishCommandAndWait(ctx context.Context, deviceName, action string) error {
 	var topic string
 
 	switch deviceName {
@@ -140,8 +169,40 @@ func PublishCommand(deviceName, action string) error {
 		return fmt.Errorf("unknown device: %s", deviceName)
 	}
 
-	token := client.Publish(topic, 0, false, action)
-	token.Wait()
+	// Tạo key để theo dõi lệnh
+	commandKey := fmt.Sprintf("%s:%s", deviceName, action)
 
-	return token.Error()
+	// Tạo channel để nhận phản hồi
+	responseChan := make(chan string, 1)
+
+	pendingMutex.Lock()
+	pendingCommands[commandKey] = responseChan
+	pendingMutex.Unlock()
+
+	// Cleanup channel khi function kết thúc
+	defer func() {
+		pendingMutex.Lock()
+		delete(pendingCommands, commandKey)
+		pendingMutex.Unlock()
+		close(responseChan)
+	}()
+
+	// Gửi lệnh
+	token := client.Publish(topic, 0, false, action)
+	if token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+
+	// Chờ phản hồi hoặc timeout
+	select {
+	case response := <-responseChan:
+		if response == action {
+			logrus.Infof("Device confirmed: %s = %s", deviceName, response)
+			return nil
+		} else {
+			return fmt.Errorf("device response mismatch: expected %s, got %s", action, response)
+		}
+	case <-ctx.Done():
+		return ctx.Err() // Timeout hoặc cancel
+	}
 }

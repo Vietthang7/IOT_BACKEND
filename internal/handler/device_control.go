@@ -4,6 +4,7 @@ package handler
 import (
 	"backend/internal/consts"
 	"backend/internal/mqtt"
+	"context"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,7 +16,6 @@ func ControlDevice(c *fiber.Ctx) error {
 		DeviceName string `json:"device_name"`
 		Action     string `json:"action"`
 	}
-
 	if err := c.BodyParser(&req); err != nil {
 		return ResponseError(c, fiber.StatusBadRequest,
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.GetFailed)
@@ -24,12 +24,18 @@ func ControlDevice(c *fiber.Ctx) error {
 	if req.DeviceName == "" || (req.Action != consts.ACTION_ON && req.Action != consts.ACTION_OFF) {
 		return ResponseError(c, fiber.StatusBadRequest, consts.InvalidInput, consts.GetFailed)
 	}
-
-	if err := mqtt.PublishCommand(req.DeviceName, req.Action); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), consts.TIMEOUT)
+	defer cancel()
+	// Gửi lệnh và chờ xác nhận
+	if err := mqtt.PublishCommandAndWait(ctx, req.DeviceName, req.Action); err != nil {
 		logrus.Error(err)
+		if err = context.DeadlineExceeded; err != nil {
+			return ResponseError(c, fiber.StatusRequestTimeout, " Lỗi gửi lệnh: Hết thời gian chờ phản hồi từ thiết bị", consts.GetFailed)
+		}
 		return ResponseError(c, fiber.StatusInternalServerError,
-			fmt.Sprintf("Lỗi gửi lệnh: %s", err.Error()), consts.GetFailed)
+			fmt.Sprintf("Lỗi điều khiển thiết bị: %s", err.Error()), consts.GetFailed)
 	}
-
-	return ResponseSuccess(c, fiber.StatusOK, "Đã gửi lệnh điều khiển thiết bị", nil)
+	// CHỈ KHI ESP32 XÁC NHẬN ĐÃ THỰC THI THÀNH CÔNG
+	return ResponseSuccess(c, fiber.StatusOK,
+		fmt.Sprintf("Thiết bị %s đã %s thành công", req.DeviceName, req.Action), nil)
 }
