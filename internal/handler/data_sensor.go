@@ -5,7 +5,6 @@ import (
 	"backend/internal/repo"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -39,19 +38,21 @@ func GetDataSensor(c *fiber.Ctx) error {
 	}
 
 	if c.Query("start_time") != "" {
-		startTime, err := time.Parse("2006-01-02T15:04:05.000Z", c.Query("start_time"))
-		if err == nil {
-			conditions = append(conditions, "time >= ?")
-			args = append(args, startTime)
+		startTime := c.Query("start_time")
+		if len(startTime) == 10 {
+			startTime += " 00:00:00"
 		}
+		conditions = append(conditions, "time >= ?")
+		args = append(args, startTime)
 	}
 
 	if c.Query("end_time") != "" {
-		endTime, err := time.Parse("2006-01-02T15:04:05.000Z", c.Query("end_time"))
-		if err == nil {
-			conditions = append(conditions, "time <= ?")
-			args = append(args, endTime)
+		endTime := c.Query("end_time")
+		if len(endTime) == 10 {
+			endTime += " 23:59:59"
 		}
+		conditions = append(conditions, "time <= ?")
+		args = append(args, endTime)
 	}
 
 	if len(conditions) > 0 {

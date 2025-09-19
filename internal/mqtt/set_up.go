@@ -23,7 +23,7 @@ var pendingMutex = sync.Mutex{}
 
 func Setup() {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker("tcp://192.22.18.101:1883")
+	opts.AddBroker("tcp://192.22.18.102:1883")
 	opts.SetUsername("user1")
 	opts.SetPassword("123456")
 	opts.SetClientID("backend-server")
