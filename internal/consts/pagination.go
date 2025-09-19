@@ -32,7 +32,7 @@ func BindRequestTable(c *fiber.Ctx, order string) RequestTable {
 	if request.Search != "" {
 		request.Search = strings.TrimSpace(request.Search)
 	}
-	if request.Length < 5 {
+	if request.Length < 5 && request.Length != 1 {
 		request.Length = 5
 	}
 	if request.Order == "" {
