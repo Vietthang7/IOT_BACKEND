@@ -38,16 +38,10 @@ func GetDeviceHistory(c *fiber.Ctx) error {
 		args = append(args, c.Query("action"))
 	}
 
-	if c.Query("start_time") != "" {
-		startTime := c.Query("start_time")
-		conditions = append(conditions, "time >= ?")
-		args = append(args, startTime)
-	}
-
-	if c.Query("end_time") != "" {
-		endTime := c.Query("end_time")
-		conditions = append(conditions, "time <= ?")
-		args = append(args, endTime)
+	if c.Query("search_time") != "" {
+		searchTime := c.Query("search_time")
+		conditions = append(conditions, "time LIKE ?")
+		args = append(args, "%"+searchTime+"%")
 	}
 
 	if len(conditions) > 0 {

@@ -22,6 +22,7 @@ const (
 	TOPIC_DEN_STATUS     = "esp32/denStatus"
 	TOPIC_QUAT_STATUS    = "esp32/quatStatus"
 	TOPIC_DIEUHOA_STATUS = "esp32/dieuhoaStatus"
+	MQTT_CONNECTED       = "connected"
 
 	// TimeOut
 	TIMEOUT = 5 * time.Second

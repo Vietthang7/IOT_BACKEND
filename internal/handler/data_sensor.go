@@ -31,30 +31,15 @@ func GetDataSensor(c *fiber.Ctx) error {
 		conditions = append(conditions, "device_name LIKE ?")
 		args = append(args, "%"+pagination.Search+"%")
 	}
-
 	if c.Query("action") != "" {
 		conditions = append(conditions, "action = ?")
 		args = append(args, c.Query("action"))
 	}
-
-	if c.Query("start_time") != "" {
-		startTime := c.Query("start_time")
-		if len(startTime) == 10 {
-			startTime += " 00:00:00"
-		}
-		conditions = append(conditions, "time >= ?")
-		args = append(args, startTime)
+	if c.Query("search_time") != "" {
+		searchTime := c.Query("search_time")
+		conditions = append(conditions, "time LIKE ?")
+		args = append(args, "%"+searchTime+"%")
 	}
-
-	if c.Query("end_time") != "" {
-		endTime := c.Query("end_time")
-		if len(endTime) == 10 {
-			endTime += " 23:59:59"
-		}
-		conditions = append(conditions, "time <= ?")
-		args = append(args, endTime)
-	}
-
 	if len(conditions) > 0 {
 		query = strings.Join(conditions, " AND ")
 	}
@@ -64,9 +49,51 @@ func GetDataSensor(c *fiber.Ctx) error {
 		return ResponseError(c, fiber.StatusInternalServerError,
 			fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
 	}
+
+	sensorType := c.Query("sensor_type")
+	var responseData interface{}
+
+	if sensorType == "humidity" {
+		// Chỉ trả về humidity data
+		humidityData := make([]map[string]interface{}, len(entries))
+		for i, entry := range entries {
+			humidityData[i] = map[string]interface{}{
+				"id":       entry.ID,
+				"humidity": entry.Humidity,
+				"time":     entry.Time,
+			}
+		}
+		responseData = humidityData
+	} else if sensorType == "temp" {
+		// Chỉ trả về temp data
+		tempData := make([]map[string]interface{}, len(entries))
+		for i, entry := range entries {
+			tempData[i] = map[string]interface{}{
+				"id":   entry.ID,
+				"temp": entry.Temp,
+				"time": entry.Time,
+			}
+		}
+		responseData = tempData
+	} else if sensorType == "lux" {
+		// Chỉ trả về lux data
+		lightData := make([]map[string]interface{}, len(entries))
+		for i, entry := range entries {
+			lightData[i] = map[string]interface{}{
+				"id":   entry.ID,
+				"lux":  entry.Lux,
+				"time": entry.Time,
+			}
+		}
+		responseData = lightData
+	} else {
+		responseData = entries
+	}
+
 	pagination.Total = entry.Count(query, args)
 	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
-		"data":       entries,
-		"pagination": pagination,
+		"data":        responseData,
+		"pagination":  pagination,
+		"sensor_type": sensorType,
 	})
 }

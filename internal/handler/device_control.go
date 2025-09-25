@@ -16,6 +16,10 @@ func ControlDevice(c *fiber.Ctx) error {
 		DeviceName string `json:"device_name"`
 		Action     string `json:"action"`
 	}
+	// if c.Locals("MQTT_status") != consts.MQTT_CONNECTED {
+	// 	return ResponseError(c, fiber.StatusInternalServerError,
+	// 		"Lỗi điều khiển thiết bị", consts.GetFailed)
+	// }
 	if err := c.BodyParser(&req); err != nil {
 		return ResponseError(c, fiber.StatusBadRequest,
 			fmt.Sprintf("%s: %s", consts.InvalidInput, err.Error()), consts.GetFailed)
