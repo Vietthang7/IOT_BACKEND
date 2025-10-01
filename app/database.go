@@ -93,7 +93,9 @@ func MigrateDatabase(DB *gorm.DB) error {
 	if err := DB.AutoMigrate(&model.DeviceHistory{}); err != nil {
 		logrus.Debugf("Err AutoMigrate DeviceHistory: %v", err)
 	}
-
+	if err := DB.AutoMigrate(&model.User{}); err != nil {
+		logrus.Debugf("Err AutoMigrate DeviceHistory: %v", err)
+	}
 	logrus.Info("Migration finish")
 	return nil
 }

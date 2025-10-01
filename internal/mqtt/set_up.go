@@ -23,7 +23,7 @@ var pendingMutex = sync.Mutex{}
 
 func Setup() {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker("tcp://192.22.18.102:1883")
+	opts.AddBroker("tcp://192.168.1.105:1883")
 	opts.SetUsername("user1")
 	opts.SetPassword("123456")
 	opts.SetClientID("backend-server")
@@ -118,7 +118,7 @@ func processDeviceStatus(topic, payload string) {
 		return
 	}
 
-	// ✅ THÊM LOGIC GỬI PHẢN HỒI VỀ CHANNEL
+	// THÊM LOGIC GỬI PHẢN HỒI VỀ CHANNEL
 	commandKey := fmt.Sprintf("%s:%s", deviceName, payload)
 
 	pendingMutex.Lock()

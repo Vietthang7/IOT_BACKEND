@@ -27,72 +27,69 @@ func GetDataSensor(c *fiber.Ctx) error {
 		pagination.Dir = "asc"
 	}
 	pagination.Order = "time"
-	if pagination.Search != "" {
-		conditions = append(conditions, "device_name LIKE ?")
-		args = append(args, "%"+pagination.Search+"%")
+	if c.Query("sort_type") != "" && c.Query("sort_order") != "" {
+		sortType := c.Query("sort_type")
+		sortOrder := c.Query("sort_order")
+
+		validSortColumns := map[string]bool{
+			"temp":     true,
+			"humidity": true,
+			"lux":      true,
+			"time":     true,
+		}
+
+		validSortOrders := map[string]bool{
+			"asc":  true,
+			"desc": true,
+		}
+
+		if validSortColumns[sortType] && validSortOrders[sortOrder] {
+			pagination.Order = sortType
+			pagination.Dir = sortOrder
+			logrus.Infof("Custom sort applied: %s %s", sortType, sortOrder)
+		} else {
+			logrus.Warnf("Invalid sort parameters: sort_type=%s, sort_order=%s", sortType, sortOrder)
+		}
 	}
-	if c.Query("action") != "" {
-		conditions = append(conditions, "action = ?")
-		args = append(args, c.Query("action"))
+	sensorType := c.Query("sensor_type")
+	if c.Query("search_data") != "" {
+		searchData := c.Query("search_data")
+		if sensorType == "all" {
+			conditions = append(conditions, "(temp LIKE ? OR humidity LIKE ? OR lux LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
+			args = append(args, "%"+searchData+"%", "%"+searchData+"%", "%"+searchData+"%", "%"+searchData+"%")
+		} else {
+			switch sensorType {
+			case "temp":
+				conditions = append(conditions, "(temp LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
+				args = append(args, "%"+searchData+"%", "%"+searchData+"%")
+			case "humidity":
+				conditions = append(conditions, "(humidity LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
+				args = append(args, "%"+searchData+"%", "%"+searchData+"%")
+			case "lux":
+				conditions = append(conditions, "(lux LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
+				args = append(args, "%"+searchData+"%", "%"+searchData+"%")
+			default:
+				conditions = append(conditions, "DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?")
+				args = append(args, "%"+searchData+"%")
+			}
+		}
 	}
-	if c.Query("search_time") != "" {
-		searchTime := c.Query("search_time")
-		conditions = append(conditions, "time LIKE ?")
-		args = append(args, "%"+searchTime+"%")
+	if c.Query("sort_type") != "" {
+		if c.Query("sort_order") != "" {
+
+		}
 	}
 	if len(conditions) > 0 {
 		query = strings.Join(conditions, " AND ")
 	}
-
 	if entries, err = entry.Find(&pagination, query, args); err != nil {
 		logrus.Error(err)
 		return ResponseError(c, fiber.StatusInternalServerError,
 			fmt.Sprintf("%s: %s", consts.GetFail, err.Error()), consts.GetFailed)
 	}
-
-	sensorType := c.Query("sensor_type")
-	var responseData interface{}
-
-	if sensorType == "humidity" {
-		// Chỉ trả về humidity data
-		humidityData := make([]map[string]interface{}, len(entries))
-		for i, entry := range entries {
-			humidityData[i] = map[string]interface{}{
-				"id":       entry.ID,
-				"humidity": entry.Humidity,
-				"time":     entry.Time,
-			}
-		}
-		responseData = humidityData
-	} else if sensorType == "temp" {
-		// Chỉ trả về temp data
-		tempData := make([]map[string]interface{}, len(entries))
-		for i, entry := range entries {
-			tempData[i] = map[string]interface{}{
-				"id":   entry.ID,
-				"temp": entry.Temp,
-				"time": entry.Time,
-			}
-		}
-		responseData = tempData
-	} else if sensorType == "lux" {
-		// Chỉ trả về lux data
-		lightData := make([]map[string]interface{}, len(entries))
-		for i, entry := range entries {
-			lightData[i] = map[string]interface{}{
-				"id":   entry.ID,
-				"lux":  entry.Lux,
-				"time": entry.Time,
-			}
-		}
-		responseData = lightData
-	} else {
-		responseData = entries
-	}
-
 	pagination.Total = entry.Count(query, args)
 	return ResponseSuccess(c, fiber.StatusOK, consts.GetSuccess, fiber.Map{
-		"data":        responseData,
+		"data":        entries,
 		"pagination":  pagination,
 		"sensor_type": sensorType,
 	})

@@ -25,5 +25,5 @@ const (
 	MQTT_CONNECTED       = "connected"
 
 	// TimeOut
-	TIMEOUT = 5 * time.Second
+	TIMEOUT = 2 * time.Second
 )
