@@ -1,11 +1,9 @@
 package mqtt
 
 import (
-	"backend/internal/broker"
 	"backend/internal/consts"
 	"backend/internal/repo"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -23,7 +21,7 @@ var pendingMutex = sync.Mutex{}
 
 func Setup() {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker("tcp://172.21.145.65:1883")
+	opts.AddBroker("tcp://192.168.1.101:1883")
 	opts.SetUsername("user1")
 	opts.SetPassword("123456")
 	opts.SetClientID("backend-server")
@@ -64,7 +62,6 @@ func Setup() {
 		logrus.Error("MQTT subscription error:", token.Error())
 		return
 	}
-	// c.Locals("MQTT_status", consts.MQTT_CONNECTED)
 	logrus.Info("MQTT client connected")
 }
 
@@ -72,10 +69,6 @@ func Setup() {
 var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	topic := msg.Topic()
 	payload := string(msg.Payload())
-	fmt.Println(topic)
-	jsonData, _ := json.MarshalIndent(payload, "", "  ")
-	// In chuỗi JSON
-	fmt.Println(string(jsonData))
 	logrus.Infof("Received message: %s from topic: %s", payload, topic)
 
 	if topic == consts.TOPIC_DATASENSOR {
@@ -84,7 +77,6 @@ var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Messa
 		processDeviceStatus(topic, payload)
 	}
 
-	broker.BroadcastData(topic, payload)
 }
 
 func processSensorData(payload string) {
@@ -99,14 +91,7 @@ func processSensorData(payload string) {
 		Lux:      light,
 		Time:     time.Now(),
 	}
-
 	dataSensor.Create()
-	broker.BroadcastSensorData(map[string]interface{}{
-		"temp":     temp,
-		"humidity": humidity,
-		"lux":      light,
-		"time":     time.Now(),
-	})
 }
 
 func processDeviceStatus(topic, payload string) {
@@ -156,18 +141,11 @@ func processDeviceStatus(topic, payload string) {
 		logrus.Errorf("Failed to save device history: %v", err)
 	}
 
-	// Broadcast trạng thái đã được xác nhận
-	broker.BroadcastData("device_status_confirmed", map[string]interface{}{
-		"device": deviceName,
-		"action": payload,
-		"time":   time.Now(),
-	})
 }
 
 // Hàm gửi lệnh điều khiển đến thiết bị
 func PublishCommandAndWait(ctx context.Context, deviceName, action string) error {
 	var topic string
-
 	switch deviceName {
 	case consts.DEVICE_DEN:
 		topic = consts.TOPIC_DEN
