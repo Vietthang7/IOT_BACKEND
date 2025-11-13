@@ -60,23 +60,21 @@ func GetDataSensor(c *fiber.Ctx) error {
 		} else {
 			switch sensorType {
 			case "temp":
-				conditions = append(conditions, "(temp LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
-				args = append(args, "%"+searchData+"%", "%"+searchData+"%")
+				conditions = append(conditions, "(temp LIKE ? )")
+				args = append(args, "%"+searchData+"%")
 			case "humidity":
-				conditions = append(conditions, "(humidity LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
-				args = append(args, "%"+searchData+"%", "%"+searchData+"%")
+				conditions = append(conditions, "(humidity LIKE ?)")
+				args = append(args, "%"+searchData+"%")
 			case "lux":
-				conditions = append(conditions, "(lux LIKE ? OR DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?)")
-				args = append(args, "%"+searchData+"%", "%"+searchData+"%")
+				conditions = append(conditions, "(lux LIKE ? )")
+				args = append(args, "%"+searchData+"%")
+			case "time":
+				conditions = append(conditions, "DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?")
+				args = append(args, "%"+searchData+"%")
 			default:
 				conditions = append(conditions, "DATE_FORMAT(time, '%Y-%m-%d %H:%i:%s') LIKE ?")
 				args = append(args, "%"+searchData+"%")
 			}
-		}
-	}
-	if c.Query("sort_type") != "" {
-		if c.Query("sort_order") != "" {
-
 		}
 	}
 	if len(conditions) > 0 {
