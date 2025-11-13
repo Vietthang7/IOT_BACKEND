@@ -23,7 +23,7 @@ var pendingMutex = sync.Mutex{}
 
 func Setup() {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker("tcp://192.168.180.65:1883")
+	opts.AddBroker("tcp://172.21.145.65:1883")
 	opts.SetUsername("user1")
 	opts.SetPassword("123456")
 	opts.SetClientID("backend-server")
@@ -38,6 +38,14 @@ func Setup() {
 
 	// Subscribe vào các topics
 	if token := client.Subscribe(consts.TOPIC_DATASENSOR, 0, nil); token.Wait() && token.Error() != nil {
+		logrus.Error("MQTT subscription error:", token.Error())
+		return
+	}
+	if token := client.Subscribe(consts.TOPIC_CHUONG_STATUS, 0, nil); token.Wait() && token.Error() != nil {
+		logrus.Error("MQTT subscription error:", token.Error())
+		return
+	}
+	if token := client.Subscribe(consts.TOPIC_CUA_STATUS, 0, nil); token.Wait() && token.Error() != nil {
 		logrus.Error("MQTT subscription error:", token.Error())
 		return
 	}
@@ -110,6 +118,10 @@ func processDeviceStatus(topic, payload string) {
 		deviceName = consts.DEVICE_QUAT
 	} else if strings.Contains(topic, "dieuhoaStatus") {
 		deviceName = consts.DEVICE_DIEUHOA
+	} else if strings.Contains(topic, "chuongStatus") {
+		deviceName = consts.DEVICE_CHUONG
+	} else if strings.Contains(topic, "cuaStatus") {
+		deviceName = consts.DEVICE_CUA
 	}
 
 	// Validation payload
@@ -161,6 +173,10 @@ func PublishCommandAndWait(ctx context.Context, deviceName, action string) error
 		topic = consts.TOPIC_DEN
 	case consts.DEVICE_QUAT:
 		topic = consts.TOPIC_QUAT
+	case consts.DEVICE_CUA:
+		topic = consts.TOPIC_CUA
+	case consts.DEVICE_CHUONG:
+		topic = consts.TOPIC_CHUONG
 	case consts.DEVICE_DIEUHOA:
 		topic = consts.TOPIC_DIEUHOA
 	case consts.DEVICE_ALL:

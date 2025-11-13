@@ -5,6 +5,7 @@ import (
 	"backend/internal/consts"
 	"backend/internal/model"
 	"context"
+	"time"
 )
 
 type (
@@ -60,4 +61,40 @@ func (d *DeviceHistory) Create() error {
 
 	err := app.Database.DB.WithContext(ctx).Create(d).Error
 	return err
+}
+func (d *DeviceHistory) GetDeviceStatsByDateRange(startDate, endDate string) ([]map[string]interface{}, error) {
+	var results []map[string]interface{}
+
+	err := app.Database.DB.Raw(`
+        SELECT 
+            DATE(time) as date,
+            device_name,
+            SUM(CASE WHEN action = 'ON' THEN 1 ELSE 0 END) as on_count,
+            SUM(CASE WHEN action = 'OFF' THEN 1 ELSE 0 END) as off_count,
+            COUNT(*) as total_actions
+        FROM device_histories
+        WHERE DATE(time) BETWEEN ? AND ? AND deleted_at IS NULL
+        GROUP BY DATE(time), device_name
+        ORDER BY DATE(time) DESC, device_name
+    `, startDate, endDate).Scan(&results).Error
+
+	return results, err
+}
+func (d *DeviceHistory) GetTodayDeviceStats() ([]map[string]interface{}, error) {
+	var results []map[string]interface{}
+	today := time.Now().Format("2006-01-02")
+
+	err := app.Database.DB.Raw(`
+        SELECT 
+            device_name,
+            SUM(CASE WHEN action = 'ON' THEN 1 ELSE 0 END) as on_count,
+            SUM(CASE WHEN action = 'OFF' THEN 1 ELSE 0 END) as off_count,
+            COUNT(*) as total_actions
+        FROM device_histories
+        WHERE DATE(time) = ? AND deleted_at IS NULL
+        GROUP BY device_name
+        ORDER BY device_name
+    `, today).Scan(&results).Error
+
+	return results, err
 }

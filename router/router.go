@@ -35,4 +35,6 @@ func setupRouter(fiber_app *fiber.App) {
 	api.Get("/data_sensor", handler.GetDataSensor)
 	api.Get("/list_devices", handler.ListDevices)
 	api.Post("/control_device", handler.ControlDevice)
+	api.Get("/device_stats/by_date_range", handler.GetDeviceStatsByDateRange)
+	api.Get("/device_stats/today", handler.GetTodayDeviceStats)
 }
